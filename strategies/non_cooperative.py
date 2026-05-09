@@ -28,9 +28,14 @@ class NonCooperativeStrategy(AntStrategy):
         return random_direction  # Random movement for now, replace with actual logic
 
 
+    # doit-on utiliser _decide_movement() ? non, c'est une méthode privée et est utilisée que dans decide_action()
 
+    # WARNING : un pas est défini par une action (decide_action).
+    # Est-ce qu'on peut faire un goto() ou radar() au niveau de notre stratégie sans trigger decide_action à chaque pas ?
+    # Est-ce qu'à chaque action (déplacement, rotation, récupération, dépot, ect.) decide_action() sera appelé ?
+    # Ou bien est-ce qu'un appel à decide_action() correspond à une décision, une itération ?
 
-
+    # radius de vision : 3, pas 4 !
 
     # Étapes
     # - stocker la position de la colonie

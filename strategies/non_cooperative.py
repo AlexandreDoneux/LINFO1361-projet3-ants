@@ -21,12 +21,26 @@ class NonCooperativeStrategy(AntStrategy):
 
     def __init__(self):
         """Initialize the strategy with last action tracking"""
-        # TODO: Insert your code here
+
+        # Current action, can be "Goto", "Scan", "Scatter" ("gohome" -> goto with the position of the colony)
+        self.action = "Scatter"
+        self.memory = {
+            "colony_position": None, # storing colony position
+            "food_positions": [], # storing positions of food seen but not yet collected
+            "visited_positions": set() # storing positions already seen to avoid redundant scanning
+        }
 
     def decide_action(self, perception: AntPerception) -> AntAction:
         """Decide an action based on current perception"""
 
-        # TODO: Insert your code here
+        # storing colony position if seen
+        if self.memory.get("colony_position") is None:
+            self.memory["colony_position"] = self.get_ant_position(perception) # current position
+
+
+        # storing food positions if seen + updated if they changed (some other ant might have collected the food)
+
+        # storing seen positions to avoid redundant scanning
         
         return self._decide_movement(perception)
 
@@ -40,11 +54,32 @@ class NonCooperativeStrategy(AntStrategy):
         return random_direction  # Random movement for now, replace with actual logic
 
 
+    def get_ant_position(self, perception: AntPerception):
+        """Get the current position of the ant"""
+        #TODO check if working well
+
+        #get the current position based on
+        visible_cells = perception.visible_cells
+        direction = perception.direction
+        # we can use the visible cells and the direction to determine the current position of the ant
+        # .get_delta() can be used to get the direction in terms of x and y values,
+        # taking the oposite will give us the positions we want minimized/maximised -> write a better way to explain
+
+        # multiply every position of visible cells by the oposite of direction.get_delta() and select the position with the highest absolute values
+        # this will give us th position of the ant.
+        dx, dy = direction.get_delta()
+
+        return max(visible_cells, key=lambda cell: cell[0] * (-dx) + cell[1] * (-dy))
+
+
+
     def goto(self, position, destination):
         """Move towards a specific position"""
 
         # => voir algorithmes de pathfinding
         # -> warning : obstacles !
+
+        # AntPerception._get_direction_from_delta()
 
         pass
 

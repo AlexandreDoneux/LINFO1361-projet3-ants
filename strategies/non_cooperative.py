@@ -28,6 +28,25 @@ class NonCooperativeStrategy(AntStrategy):
         return random_direction  # Random movement for now, replace with actual logic
 
 
+
+
+
+
+    # Étapes
+    # - stocker la position de la colonie
+    # - implémenter radar() et récupération de la nouriture trouvée
+    # - implémenter closest_food() pour trouver la nouriture la plus proche (pour optimiser le déplacement vers celle-ci)
+    # - implémenter goto() pour se déplacer vers un endroit précis (colonie ou nouriture)
+    # - améliorer radar() pour si il trouve de la nouriture commencer à regarder autour (déplacement autour de la zone ananlysée/où la nourriture est trouvée)
+    # - implémenter scatter() pour faire une recherche aléatoire à partir d'un endroit (colonie ou zone de nouriture trouvée).
+    # - implémenter decide_action() pour définir le comportement de la fourmi
+    # - stocker la nourriture trouvée avec des zones de libres à proximité (disons une zone de 2 fois son radius de vision)
+    # - Prendre en compte les obstacles dans goto(), scatter(), closest_food()
+    #
+    # => voir après
+
+
+
     # Non-cooperative strategy:
     # aucun partage d'information mais on a une mémoire
 
@@ -72,3 +91,7 @@ class NonCooperativeStrategy(AntStrategy):
     # -> recherche de la nouriture ou des phéromones autour de soi
     # -> avec simple tour 360° autour de la fourmi ?
     # -> avec recherche un peu plus éfficace ? intensification (rechercher dans la même zone) ou diversification (scatter) selon certaines probabilités ?
+
+
+
+

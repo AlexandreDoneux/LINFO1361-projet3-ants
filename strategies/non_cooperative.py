@@ -1,4 +1,4 @@
-from environment import TerrainType, AntPerception
+from environment import TerrainType, AntPerception, Direction
 from ant import AntAction, AntStrategy
 
 import random
@@ -34,11 +34,10 @@ class NonCooperativeStrategy(AntStrategy):
         """Decide an action based on current perception"""
 
         # storing colony position if seen
-        if self.memory.get("colony_position") is None:
-            self.memory["colony_position"] = self.get_ant_position(perception) # current position
 
 
         # storing food positions if seen + updated if they changed (some other ant might have collected the food)
+
 
         # storing seen positions to avoid redundant scanning
         
@@ -54,22 +53,7 @@ class NonCooperativeStrategy(AntStrategy):
         return random_direction  # Random movement for now, replace with actual logic
 
 
-    def get_ant_position(self, perception: AntPerception):
-        """Get the current position of the ant"""
-        #TODO check if working well
 
-        #get the current position based on
-        visible_cells = perception.visible_cells
-        direction = perception.direction
-        # we can use the visible cells and the direction to determine the current position of the ant
-        # .get_delta() can be used to get the direction in terms of x and y values,
-        # taking the oposite will give us the positions we want minimized/maximised -> write a better way to explain
-
-        # multiply every position of visible cells by the oposite of direction.get_delta() and select the position with the highest absolute values
-        # this will give us th position of the ant.
-        dx, dy = direction.get_delta()
-
-        return max(visible_cells, key=lambda cell: cell[0] * (-dx) + cell[1] * (-dy))
 
 
 

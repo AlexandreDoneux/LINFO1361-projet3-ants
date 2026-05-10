@@ -68,19 +68,24 @@ class NonCooperativeStrategy(AntStrategy):
         # if the ant still has some food positions in memory, try to go to the closest one
         elif self.memory["food_relative_positions"]:
             closest_food = self.closest_food()
+            action, new_dest = self.goto(perception, self.action_info)
             self.current_action = "Goto"
-            self.action_info = closest_food
-            action = self.goto(perception, closest_food)
+            self.action_info = new_dest
+        elif self.current_action == "Goto":
+            # if the ant is currently in a "Goto" action, continue going to the destination until it reaches it or sees food on the way
+            action, new_dest = self.goto(perception, self.action_info)
+            self.current_action = "Goto"
+            self.action_info = new_dest
         elif perception.has_food:
             # if ant has food, go to the colony
-            action = self.goto(perception, self.memory["colony_relative_position"])
+            action, new_dest = self.goto(perception, self.memory["colony_relative_position"])
             self.current_action = "Goto"
-            self.action_info = self.memory["colony_relative_position"]
+            self.action_info = new_dest
         else:
             # if no food in memory and no food carried, scatter to explore the environment
-            action = self.scatter()
-            self.action = "Scatter"
-            self.action_info = None
+            action = self.scatter(perception)
+            #self.action = "Scatter"
+            #self.action_info = None
 
 
         # updating the colony relative position and relative food positions du to movement of the ant
@@ -97,15 +102,16 @@ class NonCooperativeStrategy(AntStrategy):
         # check values !!!!!!!!!!!
 
 
-        test_action, new_dest = self.goto(perception, (40, 120)) # relative position !
-        print(new_dest)
+        #test_action, new_dest = self.goto(perception, (40, 120)) # relative position !
+        #print(new_dest)
         # -> problem with values, in this test, the destination always being the same, the ant will always go to one of the cardinalities
         # needs update of the destination through memory
         # there still is a problem with orientation. With a fixed value the ant should turn continuously.
 
         
         #return self._decide_movement(perception)
-        return test_action
+        print(f"Current action: {self.current_action}, Action info: {self.action_info}")
+        return action
 
     def _decide_movement(self, perception: AntPerception) -> AntAction:
         """Decide which direction to move based on current state"""
@@ -171,7 +177,9 @@ class NonCooperativeStrategy(AntStrategy):
             return AntAction.MOVE_FORWARD, new_dest
         else:
             # tourne vers la droite jusqu'à ce qu'on soit bien aligné TODO : tourner à droite ou à gauche en fonction du plus court
-            new_dest = (0, 0)  # TODO : calculate new relative goal position
+            # calculate the new destination after turning right
+            new_dx, new_dy = Direction.get_delta(Direction.get_right(perception.direction))
+            new_dest = (gx - new_dx, gy - new_dy)
             return AntAction.TURN_RIGHT, new_dest
 
 
@@ -186,12 +194,20 @@ class NonCooperativeStrategy(AntStrategy):
 
         pass
 
-    def scatter(self):
+    def scatter(self, perception):
         """Randomly explore the environment when no information is available"""
 
         # possibility to search randomly or using a more efficient method like a spiral, zigzag, other pattern ?
 
-        pass
+        # go to random relative position
+        destination = (random.randint(-200, 200), random.randint(-200, 200))
+        print(f"Scattering to random destination: {destination}")
+        action, new_dest = self.goto(perception, destination)
+        print(f"Scatter action: {action}, New destination: {new_dest}")
+        self.current_action = "Goto"
+        self.action_info = new_dest
+
+        return action
 
 
     def closest_food(self):

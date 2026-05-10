@@ -70,17 +70,18 @@ class NonCooperativeStrategy(AntStrategy):
             closest_food = self.closest_food()
             self.current_action = "Goto"
             self.action_info = closest_food
+            action = self.goto(perception, closest_food)
         elif perception.has_food:
             # if ant has food, go to the colony
-            pass
+            action = self.goto(perception, self.memory["colony_relative_position"])
+            self.current_action = "Goto"
+            self.action_info = self.memory["colony_relative_position"]
         else:
             # if no food in memory and no food carried, scatter to explore the environment
+            action = self.scatter()
             self.action = "Scatter"
             self.action_info = None
 
-
-        # action that will be done at the next step, we check before that they are valid (to be implemented)
-        action = None
 
         # updating the colony relative position and relative food positions du to movement of the ant
         if action == AntAction.MOVE_FORWARD :
@@ -93,12 +94,18 @@ class NonCooperativeStrategy(AntStrategy):
         if action == AntAction.TURN_RIGHT :
             self.memory["colony_relative_position"] = (-self.memory["colony_relative_position"][1], self.memory["colony_relative_position"][0])
             self.memory["food_relative_positions"] = [(-food[1], food[0]) for food in self.memory["food_relative_positions"]]
-        # check values
+        # check values !!!!!!!!!!!
 
 
+        test_action, new_dest = self.goto(perception, (40, 120)) # relative position !
+        print(new_dest)
+        # -> problem with values, in this test, the destination always being the same, the ant will always go to one of the cardinalities
+        # needs update of the destination through memory
+        # there still is a problem with orientation. With a fixed value the ant should turn continuously.
 
         
-        return self._decide_movement(perception)
+        #return self._decide_movement(perception)
+        return test_action
 
     def _decide_movement(self, perception: AntPerception) -> AntAction:
         """Decide which direction to move based on current state"""
@@ -123,15 +130,50 @@ class NonCooperativeStrategy(AntStrategy):
 
 
 
-    def goto(self, position, destination):
-        """Move towards a specific position"""
+    def goto(self, perception, destination):
+        """
+        Move towards a specific position
+        Simply turns toward the position and goes forward. TODO : Need to take into account obstacles.
+        Ants do not block themselves. We don't need to take that into account.
+
+        warning : X axis is positive to the right, Y axis is positive downwards. So (1, 0) means one step to the right, (0, 1) means one step downwards.
+        """
 
         # => voir algorithmes de pathfinding
         # -> warning : obstacles !
 
+        # Aller jusqu'à une position donnée (relative à la position de la fourmi)
+        # Pour le moment s'arreter lorsqu'on arrive à un obstacle ou la position donnée
+        # scanner la zone si on tombe sur de la nourriture # -> prix en compte dans decide_action()²
+        # Dans la version améliorée, contourner les obstacles pour atteindre la position donnée
+        # Ensuite on peut faire du scatter une fois arrivé la-bas pour trouver la nourriture à proximité
+
         # AntPerception._get_direction_from_delta()
 
-        pass
+        # les fourmis peuvent être sur la même case
+
+        if destination == (0, 0): # Already at goal
+            return None, (0, 0)
+
+        dx, dy = perception.direction.get_delta(perception.direction)
+
+        # Find the ideal direction index to face toward the goal
+        gx, gy = destination
+        # Normalize goal vector to one of the 8 directions
+        step_x = (gx > 0) - (gx < 0)  # sign: -1, 0, or 1 : indicates the direction to step in x (right, none, left)
+        step_y = (gy > 0) - (gy < 0)
+        ideal_dir = (step_x, step_y) # direction we want to go to
+
+
+        if ideal_dir == (dx, dy):
+            # Already facing the goal —> move forward
+            new_dest = (gx - step_x, gy - step_y)
+            return AntAction.MOVE_FORWARD, new_dest
+        else:
+            # tourne vers la droite jusqu'à ce qu'on soit bien aligné TODO : tourner à droite ou à gauche en fonction du plus court
+            new_dest = (0, 0)  # TODO : calculate new relative goal position
+            return AntAction.TURN_RIGHT, new_dest
+
 
 
     def scan(self):
@@ -161,8 +203,6 @@ class NonCooperativeStrategy(AntStrategy):
             key=lambda food: food[0] ** 2 + food[1] ** 2))  # find the closest food using the distance to the ant (0,0)
 
         # => attention : obstacles ! => dans une verion améliorée
-
-        pass
 
 
 

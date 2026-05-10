@@ -33,28 +33,34 @@ class NonCooperativeStrategy(AntStrategy):
     def decide_action(self, perception: AntPerception) -> AntAction:
         """Decide an action based on current perception"""
 
-        # updating the colony relative position and relative food positions du to movement of the ant
-        # if we remember last action we can change that, if not we need to make that change at the end of the
-        # decide_action function but there could be a problem when applying the action that could cause problems with the values
-        # It would actually be the same if there was a problem and then we change the values.
-
 
         # storing food relative positions if seen
-        if perception.can_see_food():
+        if perception.can_see_food(): # redundant check because .can_see_food() already checks the visible cells for FOOD (remove later)
             for (dx, dy), cell_type in perception.visible_cells.items():
                 if cell_type == TerrainType.FOOD:
                     relative_position = (dx, dy)
                     if relative_position not in self.memory["food_relative_positions"]:
                         self.memory["food_relative_positions"].append(relative_position)
 
-        # + updated if they changed (some other ant might have collected the food)
-        for food in self.memory["food_relative_positions"]:
-            if food in perception.visible_cells.keys() and perception.visible_cells[food] != TerrainType.FOOD:
-                self.memory["food_relative_positions"].remove(food)
-        # change for loop so it checks all the visible cells instead of checking the stored food positions
+        # remove relative food positions if they disappeared (some other ant might have collected the food)
+
+        # for food in self.memory["food_relative_positions"]:
+        #     if food in perception.visible_cells.keys() and perception.visible_cells[food] != TerrainType.FOOD:
+        #         self.memory["food_relative_positions"].remove(food)
+        # # change for loop so it checks all the visible cells instead of checking the stored food positions
+
+        for (dx, dy), cell_type in perception.visible_cells.items():
+            if (dx, dy) in self.memory["food_relative_positions"] and cell_type != TerrainType.FOOD :
+                self.memory["food_relative_positions"].remove((dx, dy))
+        # -> can be added to the previous loop when we have removed "perception.can_see_food()"
 
 
         # if the ant still has some food positions in memory, try to go to the closest one
+
+
+        # updating the colony relative position and relative food positions du to movement of the ant
+        # checking the chosen action and updating the memory accordingly. If it is not possible we do not update.
+        # What if the Simulation does not allow that action ? The ant does nothing (that would be the best scenario)
 
 
         

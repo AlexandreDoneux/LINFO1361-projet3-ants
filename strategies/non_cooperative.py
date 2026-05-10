@@ -23,7 +23,9 @@ class NonCooperativeStrategy(AntStrategy):
         """Initialize the strategy with last action tracking"""
 
         # Current action, can be "Goto", "Scan", "Scatter" ("gohome" -> goto with the position of the colony)
-        self.action = "Scatter"
+        self.current_action = "Scatter"
+        self.action_info = None  # additional info for the action
+        # scan and scatter info are None, for goto it is the position to go to (relative to the ant position)
         self.memory = {
             "colony_relative_position": (0,0), # storing the relative position of the colony
             "food_relative_positions": [], # storing relative positions of food seen but not yet collected
@@ -54,8 +56,27 @@ class NonCooperativeStrategy(AntStrategy):
                 self.memory["food_relative_positions"].remove((dx, dy))
         # -> can be added to the previous loop when we have removed "perception.can_see_food()"
 
-
+        # what action to do
+        if self.ant_is_on_food(): # if the ant is on a cell with food, pick up the food
+            action = AntAction.PICK_UP_FOOD
+            self.current_action = None
+            self.action_info = None
+        elif perception.has_food and self.ant_is_in_colony(perception): # if the ant has food and is in the colony, drop the food
+            action = AntAction.DROP_FOOD
+            self.current_action = None
+            self.action_info = None
         # if the ant still has some food positions in memory, try to go to the closest one
+        elif self.memory["food_relative_positions"]:
+            closest_food = self.closest_food()
+            self.current_action = "Goto"
+            self.action_info = closest_food
+        elif perception.has_food:
+            # if ant has food, go to the colony
+            pass
+        else:
+            # if no food in memory and no food carried, scatter to explore the environment
+            self.action = "Scatter"
+            self.action_info = None
 
 
         # action that will be done at the next step, we check before that they are valid (to be implemented)
@@ -89,7 +110,16 @@ class NonCooperativeStrategy(AntStrategy):
         return random_direction  # Random movement for now, replace with actual logic
 
 
+    def ant_is_in_colony(self, perception: AntPerception) -> bool:
+        """Check if the ant is in the colony"""
 
+        return perception.visible_cells.get((0, 0)) == TerrainType.COLONY
+
+
+    def ant_is_on_food(self, perception: AntPerception) -> bool:
+        """Check if the ant is on a food cell"""
+
+        return perception.visible_cells.get((0, 0)) == TerrainType.FOOD
 
 
 
@@ -127,6 +157,8 @@ class NonCooperativeStrategy(AntStrategy):
 
         # On peut se souvenir de la nourriture qu'on aurait vu. Imaginons qu'on voit deux nouritures et qu'en se
         # déplaçant vers l'une on perds de vue l'autre. On peut s'en souvenir pour la rejoindre par après.
+        return(min(self.memory["food_relative_positions"],
+            key=lambda food: food[0] ** 2 + food[1] ** 2))  # find the closest food using the distance to the ant (0,0)
 
         # => attention : obstacles ! => dans une verion améliorée
 

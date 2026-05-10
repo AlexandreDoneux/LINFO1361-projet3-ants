@@ -77,7 +77,13 @@ class NonCooperativeStrategy(AntStrategy):
             self.memory["ant_memory"][perception.ant_id]["current_action"] = None
             self.memory["ant_memory"][perception.ant_id]["action_info"] = None
         # if the ant still has some food positions in memory, try to go to the closest one
-        elif self.memory["ant_memory"][perception.ant_id]["food_relative_positions"]:
+        elif perception.has_food:
+            # if ant has food, go to the colony
+            print(f"Ant {perception.ant_id} has food, going to colony at {self.memory['colony_relative_position']}")
+            action, new_dest = self.goto(perception, self.memory["colony_relative_position"])
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+            self.memory["ant_memory"][perception.ant_id]["action_info"] = new_dest
+        elif (len(self.memory["ant_memory"][perception.ant_id]["food_relative_positions"]) != 0):
             closest_food = self.closest_food(perception)
             action, new_dest = self.goto(perception, closest_food)
             self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
@@ -85,11 +91,6 @@ class NonCooperativeStrategy(AntStrategy):
         elif self.memory["ant_memory"][perception.ant_id]["current_action"] == "Goto":
             # if the ant is currently in a "Goto" action, continue going to the destination until it reaches it or sees food on the way
             action, new_dest = self.goto(perception, self.memory["ant_memory"][perception.ant_id]["action_info"])
-            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-            self.memory["ant_memory"][perception.ant_id]["action_info"] = new_dest
-        elif perception.has_food:
-            # if ant has food, go to the colony
-            action, new_dest = self.goto(perception, self.memory["ant_memory"]["colony_relative_position"])
             self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
             self.memory["ant_memory"][perception.ant_id]["action_info"] = new_dest
         else:
@@ -117,7 +118,7 @@ class NonCooperativeStrategy(AntStrategy):
         # needs update of the destination through memory
         # there still is a problem with orientation. With a fixed value the ant should turn continuously.
 
-        
+
         return action
 
 
@@ -201,9 +202,9 @@ class NonCooperativeStrategy(AntStrategy):
 
         # go to random relative position
         destination = (random.randint(-200, 200), random.randint(-200, 200))
-        print(f"Scattering to random destination: {destination}")
+        #print(f"Scattering to random destination: {destination}")
         action, new_dest = self.goto(perception, destination)
-        print(f"Scatter action: {action}, New destination: {new_dest}")
+        #print(f"Scatter action: {action}, New destination: {new_dest}")
         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
         self.memory["ant_memory"][perception.ant_id]["action_info"] = new_dest
 

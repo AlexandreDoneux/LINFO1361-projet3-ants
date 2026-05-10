@@ -58,9 +58,22 @@ class NonCooperativeStrategy(AntStrategy):
         # if the ant still has some food positions in memory, try to go to the closest one
 
 
+        # action that will be done at the next step, we check before that they are valid (to be implemented)
+        action = None
+
         # updating the colony relative position and relative food positions du to movement of the ant
-        # checking the chosen action and updating the memory accordingly. If it is not possible we do not update.
-        # What if the Simulation does not allow that action ? The ant does nothing (that would be the best scenario)
+        if action == AntAction.MOVE_FORWARD :
+            dx, dy = Direction.get_delta(perception.direction)
+            self.memory["colony_relative_position"] = (self.memory["colony_relative_position"][0] - dx, self.memory["colony_relative_position"][1] - dy)
+            self.memory["food_relative_positions"] = [(food[0] - dx, food[1] - dy) for food in self.memory["food_relative_positions"]]
+        if action == AntAction.TURN_LEFT :
+            self.memory["colony_relative_position"] = (self.memory["colony_relative_position"][1], -self.memory["colony_relative_position"][0])
+            self.memory["food_relative_positions"] = [(food[1], -food[0]) for food in self.memory["food_relative_positions"]]
+        if action == AntAction.TURN_RIGHT :
+            self.memory["colony_relative_position"] = (-self.memory["colony_relative_position"][1], self.memory["colony_relative_position"][0])
+            self.memory["food_relative_positions"] = [(-food[1], food[0]) for food in self.memory["food_relative_positions"]]
+        # check values
+
 
 
         

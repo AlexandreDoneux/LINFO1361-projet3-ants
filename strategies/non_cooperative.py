@@ -25,21 +25,38 @@ class NonCooperativeStrategy(AntStrategy):
         # Current action, can be "Goto", "Scan", "Scatter" ("gohome" -> goto with the position of the colony)
         self.action = "Scatter"
         self.memory = {
-            "colony_position": None, # storing colony position
-            "food_positions": [], # storing positions of food seen but not yet collected
-            "visited_positions": set() # storing positions already seen to avoid redundant scanning
+            "colony_relative_position": (0,0), # storing the relative position of the colony
+            "food_relative_positions": [], # storing relative positions of food seen but not yet collected
+            "visited_positions": set() # storing positions already seen to avoid redundant scanning => for later use
         }
 
     def decide_action(self, perception: AntPerception) -> AntAction:
         """Decide an action based on current perception"""
 
-        # storing colony position if seen
+        # updating the colony relative position and relative food positions du to movement of the ant
+        # if we remember last action we can change that, if not we need to make that change at the end of the
+        # decide_action function but there could be a problem when applying the action that could cause problems with the values
+        # It would actually be the same if there was a problem and then we change the values.
 
 
-        # storing food positions if seen + updated if they changed (some other ant might have collected the food)
+        # storing food relative positions if seen
+        if perception.can_see_food():
+            for (dx, dy), cell_type in perception.visible_cells.items():
+                if cell_type == TerrainType.FOOD:
+                    relative_position = (dx, dy)
+                    if relative_position not in self.memory["food_relative_positions"]:
+                        self.memory["food_relative_positions"].append(relative_position)
+
+        # + updated if they changed (some other ant might have collected the food)
+        for food in self.memory["food_relative_positions"]:
+            if food in perception.visible_cells.keys() and perception.visible_cells[food] != TerrainType.FOOD:
+                self.memory["food_relative_positions"].remove(food)
+        # change for loop so it checks all the visible cells instead of checking the stored food positions
 
 
-        # storing seen positions to avoid redundant scanning
+        # if the ant still has some food positions in memory, try to go to the closest one
+
+
         
         return self._decide_movement(perception)
 

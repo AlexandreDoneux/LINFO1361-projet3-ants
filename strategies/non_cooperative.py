@@ -57,7 +57,7 @@ class NonCooperativeStrategy(AntStrategy):
         # -> can be added to the previous loop when we have removed "perception.can_see_food()"
 
         # what action to do
-        if self.ant_is_on_food(): # if the ant is on a cell with food, pick up the food
+        if self.ant_is_on_food(perception): # if the ant is on a cell with food, pick up the food
             action = AntAction.PICK_UP_FOOD
             self.current_action = None
             self.action_info = None

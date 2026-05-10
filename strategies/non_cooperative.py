@@ -23,26 +23,46 @@ class NonCooperativeStrategy(AntStrategy):
         """Initialize the strategy with last action tracking"""
 
         # Current action, can be "Goto", "Scan", "Scatter" ("gohome" -> goto with the position of the colony)
-        self.current_action = "Scatter"
-        self.action_info = None  # additional info for the action
+        # self.current_action = "Scatter"
+        # self.action_info = None  # additional info for the action
         # scan and scatter info are None, for goto it is the position to go to (relative to the ant position)
+        # self.memory = {
+        #     "colony_relative_position": (0,0), # storing the relative position of the colony
+        #     "food_relative_positions": [], # storing relative positions of food seen but not yet collected
+        #     "visited_positions": set() # storing positions already seen to avoid redundant scanning => for later use
+        # }
+
         self.memory = {
-            "colony_relative_position": (0,0), # storing the relative position of the colony
-            "food_relative_positions": [], # storing relative positions of food seen but not yet collected
-            "visited_positions": set() # storing positions already seen to avoid redundant scanning => for later use
+            "colony_relative_position": (0, 0),  # storing the relative position of the colony
+            "ant_memory": {},
+        }
+
+
+    def initialize_ant_memory(self, ant_id):
+        """Initialize memory for a specific ant"""
+        self.memory["ant_memory"][ant_id] = {
+            "food_relative_positions": [],
+            "current_action": "Scatter",
+            "action_info": None
         }
 
     def decide_action(self, perception: AntPerception) -> AntAction:
         """Decide an action based on current perception"""
 
 
+        # initialize memory for the ant if it doesn't exist yet
+        if perception.ant_id not in self.memory["ant_memory"]:
+            self.initialize_ant_memory(perception.ant_id)
+
+        print(self.memory["ant_memory"][perception.ant_id])
+
         # storing food relative positions if seen
         if perception.can_see_food(): # redundant check because .can_see_food() already checks the visible cells for FOOD (remove later)
             for (dx, dy), cell_type in perception.visible_cells.items():
                 if cell_type == TerrainType.FOOD:
                     relative_position = (dx, dy)
-                    if relative_position not in self.memory["food_relative_positions"]:
-                        self.memory["food_relative_positions"].append(relative_position)
+                    if relative_position not in self.memory["ant_memory"][perception.ant_id]["food_relative_positions"]:
+                        self.memory["ant_memory"][perception.ant_id]["food_relative_positions"].append(relative_position)
 
         # remove relative food positions if they disappeared (some other ant might have collected the food)
 
@@ -52,53 +72,51 @@ class NonCooperativeStrategy(AntStrategy):
         # # change for loop so it checks all the visible cells instead of checking the stored food positions
 
         for (dx, dy), cell_type in perception.visible_cells.items():
-            if (dx, dy) in self.memory["food_relative_positions"] and cell_type != TerrainType.FOOD :
-                self.memory["food_relative_positions"].remove((dx, dy))
+            if (dx, dy) in self.memory["ant_memory"][perception.ant_id]["food_relative_positions"] and cell_type != TerrainType.FOOD :
+                self.memory["ant_memory"][perception.ant_id]["food_relative_positions"].remove((dx, dy))
         # -> can be added to the previous loop when we have removed "perception.can_see_food()"
 
         # what action to do
         if self.ant_is_on_food(perception): # if the ant is on a cell with food, pick up the food
             action = AntAction.PICK_UP_FOOD
-            self.current_action = None
-            self.action_info = None
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = None
+            self.memory["ant_memory"][perception.ant_id]["action_info"] = None
         elif perception.has_food and self.ant_is_in_colony(perception): # if the ant has food and is in the colony, drop the food
             action = AntAction.DROP_FOOD
-            self.current_action = None
-            self.action_info = None
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = None
+            self.memory["ant_memory"][perception.ant_id]["action_info"] = None
         # if the ant still has some food positions in memory, try to go to the closest one
-        elif self.memory["food_relative_positions"]:
-            closest_food = self.closest_food()
-            action, new_dest = self.goto(perception, self.action_info)
-            self.current_action = "Goto"
-            self.action_info = new_dest
-        elif self.current_action == "Goto":
+        elif self.memory["ant_memory"][perception.ant_id]["food_relative_positions"]:
+            closest_food = self.closest_food(perception)
+            action, new_dest = self.goto(perception, closest_food)
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+            self.memory["ant_memory"][perception.ant_id]["action_info"] = new_dest
+        elif self.memory["ant_memory"][perception.ant_id]["current_action"] == "Goto":
             # if the ant is currently in a "Goto" action, continue going to the destination until it reaches it or sees food on the way
-            action, new_dest = self.goto(perception, self.action_info)
-            self.current_action = "Goto"
-            self.action_info = new_dest
+            action, new_dest = self.goto(perception, self.memory["ant_memory"][perception.ant_id]["action_info"])
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+            self.memory["ant_memory"][perception.ant_id]["action_info"] = new_dest
         elif perception.has_food:
             # if ant has food, go to the colony
-            action, new_dest = self.goto(perception, self.memory["colony_relative_position"])
-            self.current_action = "Goto"
-            self.action_info = new_dest
+            action, new_dest = self.goto(perception, self.memory["ant_memory"]["colony_relative_position"])
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+            self.memory["ant_memory"][perception.ant_id]["action_info"] = new_dest
         else:
             # if no food in memory and no food carried, scatter to explore the environment
             action = self.scatter(perception)
-            #self.action = "Scatter"
-            #self.action_info = None
 
 
         # updating the colony relative position and relative food positions du to movement of the ant
         if action == AntAction.MOVE_FORWARD :
             dx, dy = Direction.get_delta(perception.direction)
             self.memory["colony_relative_position"] = (self.memory["colony_relative_position"][0] - dx, self.memory["colony_relative_position"][1] - dy)
-            self.memory["food_relative_positions"] = [(food[0] - dx, food[1] - dy) for food in self.memory["food_relative_positions"]]
+            self.memory["food_relative_positions"] = [(food[0] - dx, food[1] - dy) for food in self.memory["ant_memory"][perception.ant_id]["food_relative_positions"]]
         if action == AntAction.TURN_LEFT :
             self.memory["colony_relative_position"] = (self.memory["colony_relative_position"][1], -self.memory["colony_relative_position"][0])
-            self.memory["food_relative_positions"] = [(food[1], -food[0]) for food in self.memory["food_relative_positions"]]
+            self.memory["food_relative_positions"] = [(food[1], -food[0]) for food in self.memory["ant_memory"][perception.ant_id]["food_relative_positions"]]
         if action == AntAction.TURN_RIGHT :
             self.memory["colony_relative_position"] = (-self.memory["colony_relative_position"][1], self.memory["colony_relative_position"][0])
-            self.memory["food_relative_positions"] = [(-food[1], food[0]) for food in self.memory["food_relative_positions"]]
+            self.memory["food_relative_positions"] = [(-food[1], food[0]) for food in self.memory["ant_memory"][perception.ant_id]["food_relative_positions"]]
         # check values !!!!!!!!!!!
 
 
@@ -110,17 +128,10 @@ class NonCooperativeStrategy(AntStrategy):
 
         
         #return self._decide_movement(perception)
-        print(f"Current action: {self.current_action}, Action info: {self.action_info}")
+        print(f"Current action: {self.memory["ant_memory"][perception.ant_id]["current_action"]}, Action info: {self.memory["ant_memory"][perception.ant_id]["action_info"]}")
         return action
 
-    def _decide_movement(self, perception: AntPerception) -> AntAction:
-        """Decide which direction to move based on current state"""
-        # TODO: Insert your code here
 
-        # won't be used in the agent we implement
-
-        random_direction = random.choice([AntAction.MOVE_FORWARD, AntAction.TURN_LEFT, AntAction.TURN_RIGHT])
-        return random_direction  # Random movement for now, replace with actual logic
 
 
     def ant_is_in_colony(self, perception: AntPerception) -> bool:
@@ -204,18 +215,18 @@ class NonCooperativeStrategy(AntStrategy):
         print(f"Scattering to random destination: {destination}")
         action, new_dest = self.goto(perception, destination)
         print(f"Scatter action: {action}, New destination: {new_dest}")
-        self.current_action = "Goto"
-        self.action_info = new_dest
+        self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+        self.memory["ant_memory"][perception.ant_id]["action_info"] = new_dest
 
         return action
 
 
-    def closest_food(self):
+    def closest_food(self, perception):
         """Move towards the closest food source seen"""
 
         # On peut se souvenir de la nourriture qu'on aurait vu. Imaginons qu'on voit deux nouritures et qu'en se
         # déplaçant vers l'une on perds de vue l'autre. On peut s'en souvenir pour la rejoindre par après.
-        return(min(self.memory["food_relative_positions"],
+        return(min(self.memory["ant_memory"][perception.ant_id]["food_relative_positions"],
             key=lambda food: food[0] ** 2 + food[1] ** 2))  # find the closest food using the distance to the ant (0,0)
 
         # => attention : obstacles ! => dans une verion améliorée

@@ -54,27 +54,18 @@ class NonCooperativeStrategy(AntStrategy):
         if perception.ant_id not in self.memory["ant_memory"]:
             self.initialize_ant_memory(perception.ant_id)
 
-        print(self.memory["ant_memory"][perception.ant_id])
-
-        # storing food relative positions if seen
-        if perception.can_see_food(): # redundant check because .can_see_food() already checks the visible cells for FOOD (remove later)
-            for (dx, dy), cell_type in perception.visible_cells.items():
-                if cell_type == TerrainType.FOOD:
-                    relative_position = (dx, dy)
-                    if relative_position not in self.memory["ant_memory"][perception.ant_id]["food_relative_positions"]:
-                        self.memory["ant_memory"][perception.ant_id]["food_relative_positions"].append(relative_position)
-
-        # remove relative food positions if they disappeared (some other ant might have collected the food)
-
-        # for food in self.memory["food_relative_positions"]:
-        #     if food in perception.visible_cells.keys() and perception.visible_cells[food] != TerrainType.FOOD:
-        #         self.memory["food_relative_positions"].remove(food)
-        # # change for loop so it checks all the visible cells instead of checking the stored food positions
 
         for (dx, dy), cell_type in perception.visible_cells.items():
-            if (dx, dy) in self.memory["ant_memory"][perception.ant_id]["food_relative_positions"] and cell_type != TerrainType.FOOD :
+            # storing the relative position of food if seen
+            if cell_type == TerrainType.FOOD:
+                relative_position = (dx, dy)
+                if relative_position not in self.memory["ant_memory"][perception.ant_id]["food_relative_positions"]:
+                    self.memory["ant_memory"][perception.ant_id]["food_relative_positions"].append(relative_position)
+            # removing the relative position of food if it is no longer seen (because the ant moved or because it was picked up by another ant)
+            if (dx, dy) in self.memory["ant_memory"][perception.ant_id][
+                "food_relative_positions"] and cell_type != TerrainType.FOOD:
                 self.memory["ant_memory"][perception.ant_id]["food_relative_positions"].remove((dx, dy))
-        # -> can be added to the previous loop when we have removed "perception.can_see_food()"
+
 
         # what action to do
         if self.ant_is_on_food(perception): # if the ant is on a cell with food, pick up the food
@@ -127,8 +118,6 @@ class NonCooperativeStrategy(AntStrategy):
         # there still is a problem with orientation. With a fixed value the ant should turn continuously.
 
         
-        #return self._decide_movement(perception)
-        print(f"Current action: {self.memory["ant_memory"][perception.ant_id]["current_action"]}, Action info: {self.memory["ant_memory"][perception.ant_id]["action_info"]}")
         return action
 
 

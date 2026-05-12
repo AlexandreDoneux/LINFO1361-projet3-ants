@@ -95,22 +95,24 @@ class NonCooperativeStrategy(AntStrategy):
 
 
             # if there is an ant in front of us, do not move and do not update the position in memory
-            if any([other_ant[0] == (dir_x, dir_y) for other_ant in perception.nearby_ants]):
+            elif any([other_ant[0] == (dir_x, dir_y) for other_ant in perception.nearby_ants]):
                 if not perception.has_food:
                     self.scatter(perception) # scatter if they remember food positions wont work, add a timeout that wait some steps before allowing to go back for food
                 action = AntAction.NO_ACTION
                 # add scatter for ants not holding food
 
-            self.memory["ant_memory"][perception.ant_id]["ant_position"] = (ax + dir_x, ay + dir_y)
+            else:
+                # update position in memory
+                self.memory["ant_memory"][perception.ant_id]["ant_position"] = (ax + dir_x, ay + dir_y)
 
-            # Update food positions in memory using absolute coordinates
-            for (cx, cy), cell_type in perception.visible_cells.items():
-                abs_pos = (ax + cx, ay + cy)
-                if cell_type == TerrainType.FOOD:
-                    if abs_pos not in self.memory["ant_memory"][perception.ant_id]["food_positions"]:
-                        self.memory["ant_memory"][perception.ant_id]["food_positions"].append(abs_pos)
-                elif abs_pos in self.memory["ant_memory"][perception.ant_id]["food_positions"]:
-                    self.memory["ant_memory"][perception.ant_id]["food_positions"].remove(abs_pos)
+                # Update food positions in memory using absolute coordinates
+                for (cx, cy), cell_type in perception.visible_cells.items():
+                    abs_pos = (ax + cx, ay + cy)
+                    if cell_type == TerrainType.FOOD:
+                        if abs_pos not in self.memory["ant_memory"][perception.ant_id]["food_positions"]:
+                            self.memory["ant_memory"][perception.ant_id]["food_positions"].append(abs_pos)
+                    elif abs_pos in self.memory["ant_memory"][perception.ant_id]["food_positions"]:
+                        self.memory["ant_memory"][perception.ant_id]["food_positions"].remove(abs_pos)
 
 
 

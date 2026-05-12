@@ -91,8 +91,7 @@ class NonCooperativeStrategy(AntStrategy):
         if action == AntAction.MOVE_FORWARD:
             # if there is a map limit in front of us, scatter
             if len(perception.visible_cells) == 1:  # only (0,0) in visible cells
-                action = self.scatter(perception) # problem if tells us to go the way of the environment limit (one lost step)
-                # use a bounce_back strategy instead of scatter ? (try to go the opposite way for a few steps)
+                action = self.bounce_back(perception)
 
 
             # if there is an ant in front of us, do not move and do not update the position in memory
@@ -198,6 +197,20 @@ class NonCooperativeStrategy(AntStrategy):
         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
         self.memory["ant_memory"][perception.ant_id]["action_info"] = destination
         return self.goto(perception)
+
+
+    def bounce_back(self, perception):
+        """
+        Bounce against the environment limit or wall by going in the opposite direction.
+        Essentially calcules a goto action with the opposite of the current direction as destination.
+        """
+        ax, ay = self.memory["ant_memory"][perception.ant_id]["ant_position"]
+        dir_x, dir_y = Direction.get_delta(perception.direction)
+        destination = (ax - dir_x * 500, ay - dir_y * 500) # until hit another limit (or sooner), assistant said max 500x500 environment
+        self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+        self.memory["ant_memory"][perception.ant_id]["action_info"] = destination
+        return self.goto(perception)
+
 
     def closest_food(self, perception):
         """Return the absolute position of the closest known food."""

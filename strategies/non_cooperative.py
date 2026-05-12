@@ -15,7 +15,7 @@ class NonCooperativeStrategy(AntStrategy):
         """Initialize the strategy with last action tracking"""
 
         self.memory = {
-            "colony_position": (0, 0),  # storing the absolute position of the colony we consider to be 0,0
+            "colony_position": (0, 0),  # storing the absolute position of the colony we consider to be 0,0, doesn't have to be in memory. It is a fixed variable.
             # The external code clearly does not use the same coordinates but if we use our coordinates only in our code it should not break everything (I hope)
             "ant_memory": {},
         }
@@ -28,7 +28,9 @@ class NonCooperativeStrategy(AntStrategy):
             "food_positions": [], # list of absolute positions of food the ant has seen,
             "current_action": "Scatter",
             # Can be "Goto", "Scan", "Scatter" (going to the colony -> goto with the position of the colony)
-            "action_info": None # additional info, mainly used for "Goto" to store the destination position
+            "action_info": None, # additional info, mainly used for "Goto" to store the destination position
+            "previous_position": None, # to detect if we are stuck against a wall on the limit of the map
+            "previous_action": None, # same
         }
 
         # add obstacles later when implementing a more complex strategy
@@ -92,6 +94,15 @@ class NonCooperativeStrategy(AntStrategy):
                 elif abs_pos in self.memory["ant_memory"][perception.ant_id]["food_positions"]:
                     self.memory["ant_memory"][perception.ant_id]["food_positions"].remove(abs_pos)
 
+        if action == AntAction.MOVE_FORWARD:
+            #print("saving previous position and action")
+            print((ax, ay))
+            print(perception.visible_cells.get((0, 0)))
+            # position keeps changing despite being blocked by the limits. Thats because we update if the move was a forward but we don't check wether it worked.
+            # can we check if it worked ? -> no
+            self.memory["ant_memory"][perception.ant_id]["previous_position"] = (ax, ay)
+            self.memory["ant_memory"][perception.ant_id]["previous_action"] = action
+
 
         return action
 
@@ -112,6 +123,18 @@ class NonCooperativeStrategy(AntStrategy):
     def goto(self, perception):
         """Move toward the absolute destination stored in action_info."""
         ax, ay = self.memory["ant_memory"][perception.ant_id]["ant_position"]
+
+        if self.memory["ant_memory"][perception.ant_id]["previous_action"] == AntAction.MOVE_FORWARD :
+            pass
+            print("previous action was move forward")
+            print(self.memory["ant_memory"][perception.ant_id]["previous_position"] == (ax, ay)) # always false ... why ?
+
+        if (self.memory["ant_memory"][perception.ant_id]["previous_action"] == AntAction.MOVE_FORWARD
+                and self.memory["ant_memory"][perception.ant_id]["previous_position"] == (ax, ay)):
+            # We tried to move forward but we are still in the same position, it means we are blocked by a wall or an obstacle, we should scatter to get out of it.
+            print("scatter due to being stuck")
+            return self.scatter(perception)
+
         dest_x, dest_y = self.memory["ant_memory"][perception.ant_id]["action_info"]
 
         rel_x = dest_x - ax
@@ -144,7 +167,7 @@ class NonCooperativeStrategy(AntStrategy):
             # if there is a wall in front of us (not obstacle), scatter
             # can't differentiate between obstacle and wall that delimits the map
             #print(current_delta)
-            print(perception.visible_cells)
+            #print(perception.visible_cells)
             # TerrainType.WALL is obstacle, what is limit of the map ?
             # if not possible to detect the terrain limit type we might be able to detect when hitting a wall and using an action message.
             if perception.visible_cells.get(current_delta) == TerrainType.WALL:

@@ -44,17 +44,27 @@ class NonCooperativeStrategy(AntStrategy):
         ax, ay = self.memory["ant_memory"][perception.ant_id]["ant_position"]
 
         # Decide action
-        if self.ant_is_on_food(perception) and not perception.has_food:
+        if perception.has_food:
+            if self.ant_is_in_colony(perception):
+                action = AntAction.DROP_FOOD
+                self.memory["ant_memory"][perception.ant_id]["current_action"] = None
+                self.memory["ant_memory"][perception.ant_id]["action_info"] = None
+            else:
+                self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+                self.memory["ant_memory"][perception.ant_id]["action_info"] = self.memory["colony_position"]
+                action = self.goto(perception)
+
+        elif self.ant_is_on_food(perception) and not perception.has_food:
             # Found food and not carrying any — pick it up and head home
             action = AntAction.PICK_UP_FOOD
             self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
             self.memory["ant_memory"][perception.ant_id]["action_info"] = self.memory["colony_position"]
 
-        elif perception.has_food and self.ant_is_in_colony(perception):
-            # Back at colony with food — drop it and scatter again
-            action = AntAction.DROP_FOOD
-            self.memory["ant_memory"][perception.ant_id]["current_action"] = None
-            self.memory["ant_memory"][perception.ant_id]["action_info"] = None
+        # elif perception.has_food and self.ant_is_in_colony(perception):
+        #     # Back at colony with food — drop it and scatter again
+        #     action = AntAction.DROP_FOOD
+        #     self.memory["ant_memory"][perception.ant_id]["current_action"] = None
+        #     self.memory["ant_memory"][perception.ant_id]["action_info"] = None
 
         elif self.memory["ant_memory"][perception.ant_id]["current_action"] == "Goto":
             dest = self.memory["ant_memory"][perception.ant_id]["action_info"]
@@ -130,6 +140,24 @@ class NonCooperativeStrategy(AntStrategy):
         current_delta = Direction.get_delta(perception.direction)
 
         if current_delta == best_delta:
+
+            # if there is a wall in front of us (not obstacle), scatter
+            # can't differentiate between obstacle and wall that delimits the map
+            #print(current_delta)
+            print(perception.visible_cells)
+            # TerrainType.WALL is obstacle, what is limit of the map ?
+            # if not possible to detect the terrain limit type we might be able to detect when hitting a wall and using an action message.
+            if perception.visible_cells.get(current_delta) == TerrainType.WALL:
+                print("scatter du to reaching a wall")
+                return self.scatter(perception)
+            # not really working
+            # improve scatter if they are facing a wall and depending on the previous goto destination
+
+            # don't think it is possible to detect if we have reached the limits of the map.
+            # We can't even implement a goto() that goes around it because we don't detect it.
+            # Solution : X "going forward" but we haven't moved + not in front of a wall => reached limit
+            # can't be used for coop strategy because we don't have memory.
+
             return AntAction.MOVE_FORWARD
         else:
             dirs_in_order = [d[0] for d in all_directions]

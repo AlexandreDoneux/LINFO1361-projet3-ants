@@ -33,8 +33,7 @@ class CooperativeStrategy(AntStrategy):
      # Si on utilise des phéromones ils doivent decay à chaque pas fait. Sinon on ne peut pas prévoir la direction de la
     # piste. DOnc ce serait une itération/pas par action.
 
-    # On pourrait utiliser les phéromones pour indiquer qu'il n'y ait plus de nourriture si on fait en sorte de
-    # récupérer un max de nouriture dans la zone avant de revenir. Mais en même temps, ces phéromones peuvent permettre
-    # de demander de l'aide à d'autres fourmis. SI il y a de la nouriture par tas c'est clairement plus intéressant.
 
-    # Mieux vaut revenir directement à la colonie dès qu'on a eu une info de nouriture vu qu'on peut communiquer cette info à d'autres via les phéromones
+    # Répartir des rôles au sein de la colonie ? -> non, toutes les fourmis peuvent trouver/ramener de la nourriture
+    # Quelques fourmis qui s'occupent de garder un chemin de phéromones intact ? -> idem, n'importe quelle fourmi qui récupères de la nourriture peut faire les deux chemins de phéromones
+

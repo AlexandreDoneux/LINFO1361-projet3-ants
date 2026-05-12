@@ -204,12 +204,19 @@ class NonCooperativeStrategy(AntStrategy):
         Bounce against the environment limit or wall by going in the opposite direction.
         Essentially calcules a goto action with the opposite of the current direction as destination.
         """
+        # go to a direction opposite to the env limit we reached
         ax, ay = self.memory["ant_memory"][perception.ant_id]["ant_position"]
         dir_x, dir_y = Direction.get_delta(perception.direction)
-        destination = (ax - dir_x * 500, ay - dir_y * 500) # until hit another limit (or sooner), assistant said max 500x500 environment
+        if dir_x == 1 or dir_x == -1:
+            # hit vertical wall
+            dir_x = -dir_x
+        if dir_y == 1 or dir_y == -1:
+            # hit horizontal wall
+            dir_y = -dir_y
         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-        self.memory["ant_memory"][perception.ant_id]["action_info"] = destination
+        self.memory["ant_memory"][perception.ant_id]["action_info"] = (dir_x, dir_y)
         return self.goto(perception)
+
 
 
     def closest_food(self, perception):

@@ -62,7 +62,7 @@ class NonCooperativeStrategy(AntStrategy):
                 self.memory["ant_memory"][perception.ant_id]["action_info"] = self.memory["colony_position"]
                 action = self.goto(perception)
 
-        elif self.ant_is_on_food(perception) and not perception.has_food:
+        elif self.ant_is_on_food(perception) and not perception.has_food: # can remove has_food due to previous condition, but clearer to keep it ?
             # Found food and not carrying any — pick it up and head home
             action = AntAction.PICK_UP_FOOD
             self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
@@ -78,6 +78,12 @@ class NonCooperativeStrategy(AntStrategy):
             else:
                 action = self.goto(perception)
 
+        elif self.memory["ant_memory"][perception.ant_id]["food_positions"]:
+            closest_food = self.closest_food(perception)
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+            self.memory["ant_memory"][perception.ant_id]["action_info"] = closest_food
+            action = self.goto(perception)
+
         else:
             action = self.scatter(perception)
 
@@ -86,7 +92,7 @@ class NonCooperativeStrategy(AntStrategy):
             # if there is an ant in front of us, do not move and do not update the position in memory
             if any([other_ant[0] == (dir_x, dir_y) for other_ant in perception.nearby_ants]):
                 if not perception.has_food:
-                    self.scatter(perception)
+                    self.scatter(perception) # scatter if they remember food positions wont work, add a timeout that wait some steps before allowing to go back for food
                 action = AntAction.NO_ACTION
                 # add scatter for ants not holding food
 

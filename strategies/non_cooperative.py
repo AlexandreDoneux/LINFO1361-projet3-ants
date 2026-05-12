@@ -89,6 +89,12 @@ class NonCooperativeStrategy(AntStrategy):
 
         # Update absolute position after move
         if action == AntAction.MOVE_FORWARD:
+            # if there is a map limit in front of us, scatter
+            if len(perception.visible_cells) == 1:  # only (0,0) in visible cells
+                action = self.scatter(perception) # problem if tells us to go the way of the environment limit (one lost step)
+                # use a bounce_back strategy instead of scatter ? (try to go the opposite way for a few steps)
+
+
             # if there is an ant in front of us, do not move and do not update the position in memory
             if any([other_ant[0] == (dir_x, dir_y) for other_ant in perception.nearby_ants]):
                 if not perception.has_food:
@@ -158,10 +164,6 @@ class NonCooperativeStrategy(AntStrategy):
         current_delta = Direction.get_delta(perception.direction)
 
         if current_delta == best_delta:
-
-            # if there is a map limit in front of us, scatter
-            if len(perception.visible_cells) == 1: # only (0,0) in visible cells
-                return self.scatter(perception)
 
             return AntAction.MOVE_FORWARD
         else:

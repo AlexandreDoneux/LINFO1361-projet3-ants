@@ -27,8 +27,14 @@ class NonCooperativeStrategy(AntStrategy):
             "ant_position": (0, 0),  # is at the colony in the beginning
             "food_positions": [], # list of absolute positions of food the ant has seen,
             "current_action": "Scatter",
-            # Can be "Goto", "Scan", "Scatter" (going to the colony -> goto with the position of the colony)
-            "action_info": None, # additional info, mainly used for "Goto" to store the destination position
+            # Can be "Goto", "Scan", "Scatter", "Spy" (going to the colony -> goto with the position of the colony)
+            "goto_destination": None, # absolute position of the destination when the current action is "Goto"
+            "spy_pause": 0, # number of steps during which the ant cannot reinitiate a spy action, to avoid too much spying and allow time to find food after spying
+            "spy_info": {
+                "first_position": None, # store the nearby ants during the first spy step
+                "second_position": None, # store the nearby ants during the second spy step to compare and try to deduce the direction of movement of nearby ants with food
+            },
+            "spy_direction": None, # direction of movement of nearby ants with food deduced from the spy action, can be used to go in that direction to find food
         }
 
         # add obstacles later when implementing a more complex strategy
@@ -56,24 +62,37 @@ class NonCooperativeStrategy(AntStrategy):
             if self.ant_is_in_colony(perception):
                 action = AntAction.DROP_FOOD
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = None
-                self.memory["ant_memory"][perception.ant_id]["action_info"] = None
             else:
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-                self.memory["ant_memory"][perception.ant_id]["action_info"] = self.memory["colony_position"]
+                self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["colony_position"]
                 action = self.goto(perception)
 
         elif self.ant_is_on_food(perception) and not perception.has_food: # can remove has_food due to previous condition, but clearer to keep it ?
             # Found food and not carrying any — pick it up and head home
             action = AntAction.PICK_UP_FOOD
             self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-            self.memory["ant_memory"][perception.ant_id]["action_info"] = self.memory["colony_position"]
+            self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["colony_position"]
+
+        # ADD, if no food, and seeing ant with food, try to find the direction it is comming from and go there to find food
+        # nearby_ants : list of (position, has_food) for ants in vision range, by seeing the position change we can have
+        # an idea where the ant is comming from.
+        # not perfect if there are multiple ants with food
+        elif self.memory["ant_memory"][perception.ant_id]["current_action"] == "Spy":
+            action = self.goto(perception)
+            # have not stored the destination in action_info
 
 
         elif self.memory["ant_memory"][perception.ant_id]["current_action"] == "Goto":
-            dest = self.memory["ant_memory"][perception.ant_id]["action_info"]
+            # is not triggered if has food because already handled earlier
+            if any([has_food for position, has_food in perception.nearby_ants]) and len(perception.nearby_ants) == 1: # only try to spy if there is one ant with food nearby for the moment
+            #if any([has_food for position, has_food in perception.nearby_ants]):
+                #print("see ant with food nearby, try to find direction it is comming from")
+                if self.memory["ant_memory"][perception.ant_id]["spy_pause"] == 0: # blocs during a certain time the possibility to reinitiate a spy action
+                    self.spy(perception)
+
+            dest = self.memory["ant_memory"][perception.ant_id]["goto_destination"]
             if self.memory["ant_memory"][perception.ant_id]["ant_position"] == dest:
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = None
-                self.memory["ant_memory"][perception.ant_id]["action_info"] = None
                 action = self.scatter(perception)
             else:
                 action = self.goto(perception)
@@ -81,7 +100,7 @@ class NonCooperativeStrategy(AntStrategy):
         elif self.memory["ant_memory"][perception.ant_id]["food_positions"]:
             closest_food = self.closest_food(perception)
             self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-            self.memory["ant_memory"][perception.ant_id]["action_info"] = closest_food
+            self.memory["ant_memory"][perception.ant_id]["goto_destination"] = closest_food
             action = self.goto(perception)
 
         else:
@@ -114,7 +133,9 @@ class NonCooperativeStrategy(AntStrategy):
                     elif abs_pos in self.memory["ant_memory"][perception.ant_id]["food_positions"]:
                         self.memory["ant_memory"][perception.ant_id]["food_positions"].remove(abs_pos)
 
-
+        # remove one step of the spy pause if it is active, to eventually allow spying again after a certain time
+        if self.memory["ant_memory"][perception.ant_id]["spy_pause"] :
+            self.memory["ant_memory"][perception.ant_id]["spy_pause"] -= 1
 
         return action
 
@@ -137,7 +158,7 @@ class NonCooperativeStrategy(AntStrategy):
         ax, ay = self.memory["ant_memory"][perception.ant_id]["ant_position"]
 
 
-        dest_x, dest_y = self.memory["ant_memory"][perception.ant_id]["action_info"]
+        dest_x, dest_y = self.memory["ant_memory"][perception.ant_id]["goto_destination"]
 
         rel_x = dest_x - ax
         rel_y = dest_y - ay
@@ -197,7 +218,7 @@ class NonCooperativeStrategy(AntStrategy):
         ax, ay = self.memory["ant_memory"][perception.ant_id]["ant_position"]
         destination = (ax + random.randint(-250, 250), ay + random.randint(-250, 250))
         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-        self.memory["ant_memory"][perception.ant_id]["action_info"] = destination
+        self.memory["ant_memory"][perception.ant_id]["goto_destination"] = destination
         return self.goto(perception)
 
 
@@ -216,8 +237,35 @@ class NonCooperativeStrategy(AntStrategy):
             # hit horizontal wall
             dir_y = -dir_y
         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-        self.memory["ant_memory"][perception.ant_id]["action_info"] = (dir_x, dir_y)
+        self.memory["ant_memory"][perception.ant_id]["goto_destination"] = (dir_x, dir_y)
         return self.goto(perception)
+
+
+    def spy(self, perception):
+        """Spy on nearby ants to find food locations."""
+        # This method can be used to analyze the movement of nearby ants, especially those carrying food, to infer potential food locations.
+        # For simplicity, we will just return NO_ACTION for now, but it can be expanded to include logic for analyzing nearby ants and updating memory with inferred food locations.
+
+        if len(perception.nearby_ants) == 1:
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Spy"
+            if self.memory["ant_memory"][perception.ant_id]["spy_info"]["first_position"] :
+                self.memory["ant_memory"][perception.ant_id]["spy_info"]["second_position"] = perception.nearby_ants[0][0]
+                # do movement analysis here
+
+                a = self.memory["ant_memory"][perception.ant_id]["spy_info"]["second_position"][0] - self.memory["ant_memory"][perception.ant_id]["spy_info"]["first_position"][0]
+                b = self.memory["ant_memory"][perception.ant_id]["spy_info"]["second_position"][1] - self.memory["ant_memory"][perception.ant_id]["spy_info"]["first_position"][1]
+                print("spy direction : ", (a,b))
+
+                self.memory["ant_memory"][perception.ant_id]["spy_direction"] = (a,b)
+
+            else:
+                self.memory["ant_memory"][perception.ant_id]["spy_info"]["first_position"] = perception.nearby_ants[0][0]
+
+            self.memory["ant_memory"][perception.ant_id]["spy_info"]["spy_pause"] = 10 # make it impossible to reinitiate spying during 10 steps to look for food
+
+            return AntAction.NO_ACTION
+
+    # first handle when only one ant
 
 
 

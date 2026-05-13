@@ -35,6 +35,7 @@ class NonCooperativeStrategy(AntStrategy):
             "avoid_ant_previous_action": None, # to store the previous action before avoiding an ant, to be able to go back to it after avoiding the ant
             "scan_step": 0, # step (action number) of the scan action, to be able to do a full 360° scan with multiple steps if needed
             "scan_previous_action": None, # to store the previous action before scanning, to be able to go back to it after scanning
+            "pause_step": 20, # step (action number) of a pause action, to be able to pause for a couple of turns when we see the colony but are not yet in it with food, to allow other ants that are spying to find the colony
         }
 
         # add obstacles later when implementing a more complex strategy
@@ -60,8 +61,28 @@ class NonCooperativeStrategy(AntStrategy):
         # Decide action
         if perception.has_food:
             if self.ant_is_in_colony(perception):
+                #print("dropping food in colony")
                 action = AntAction.DROP_FOOD
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = None
+
+
+            # if close to colony but not yet in, pauses for a couple of turns -> rarely works, problem with diagonals.
+            # this might help other ants that are spying
+            # if starts slowing down to lors before reaching colony -> too slow, we loose time
+            # if we start to close to the colony -> ants with food need to avoid each other. That falsifies the oreientation they are comming from and the info other ants gather from that
+            #elif abs(self.memory["ant_memory"][perception.ant_id]["ant_position"][0]) <= 10 and abs(self.memory["ant_memory"][perception.ant_id]["ant_position"][1]) <= 10 :
+            # elif abs(self.memory["ant_memory"][perception.ant_id]["ant_position"][0]) == 10 and abs(self.memory["ant_memory"][perception.ant_id]["ant_position"][1]) == 10 :
+            #     if self.memory["ant_memory"][perception.ant_id]["pause_step"] > 0:
+            #         self.memory["ant_memory"][perception.ant_id]["pause_step"] -= 1
+            #         action = AntAction.NO_ACTION
+            #     else:
+            #         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+            #         self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["colony_position"]
+            #         action = self.goto(perception)
+            #         self.memory["ant_memory"][perception.ant_id]["pause_step"] = 20
+            #         # simplify structure
+            # -> not really effective. We need to find the right distance and wait time. That needs testing
+
             else:
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
                 self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["colony_position"]
@@ -120,7 +141,7 @@ class NonCooperativeStrategy(AntStrategy):
 
             else:
                 # update position in memory
-                self.memory["ant_memory"][perception.ant_id]["ant_position"] = (ax + dir_x, ay + dir_y)
+                self.memory["ant_memory"][perception.ant_id]["ant_position"] = (ax + dir_x, ay + dir_y) # ants sometimes block
 
                 # Update food positions in memory using absolute coordinates
                 for (cx, cy), cell_type in perception.visible_cells.items():
@@ -151,7 +172,7 @@ class NonCooperativeStrategy(AntStrategy):
     def goto(self, perception):
         """Move toward the absolute destination stored in memory."""
 
-        # Random chance we do a scan : -> not great, or at least not visible
+        # Random chance we do a scan : -> not great, or at least not visible, even bad !
         # if not perception.has_food and random.random() < 0.05: # 5% chance to do a scan instead of going to the destination
         #     print("scan")
         #     return self.scan_here(perception)

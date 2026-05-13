@@ -35,7 +35,6 @@ class NonCooperativeStrategy(AntStrategy):
             "avoid_ant_previous_action": None, # to store the previous action before avoiding an ant, to be able to go back to it after avoiding the ant
             "scan_step": 0, # step (action number) of the scan action, to be able to do a full 360° scan with multiple steps if needed
             "scan_previous_action": None, # to store the previous action before scanning, to be able to go back to it after scanning
-            "pause_step": 20, # step (action number) of a pause action, to be able to pause for a couple of turns when we see the colony but are not yet in it with food, to allow other ants that are spying to find the colony
         }
 
         # add obstacles later when implementing a more complex strategy
@@ -64,24 +63,6 @@ class NonCooperativeStrategy(AntStrategy):
                 #print("dropping food in colony")
                 action = AntAction.DROP_FOOD
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = None
-
-
-            # if close to colony but not yet in, pauses for a couple of turns -> rarely works, problem with diagonals.
-            # this might help other ants that are spying
-            # if starts slowing down to lors before reaching colony -> too slow, we loose time
-            # if we start to close to the colony -> ants with food need to avoid each other. That falsifies the oreientation they are comming from and the info other ants gather from that
-            #elif abs(self.memory["ant_memory"][perception.ant_id]["ant_position"][0]) <= 10 and abs(self.memory["ant_memory"][perception.ant_id]["ant_position"][1]) <= 10 :
-            # elif abs(self.memory["ant_memory"][perception.ant_id]["ant_position"][0]) == 10 and abs(self.memory["ant_memory"][perception.ant_id]["ant_position"][1]) == 10 :
-            #     if self.memory["ant_memory"][perception.ant_id]["pause_step"] > 0:
-            #         self.memory["ant_memory"][perception.ant_id]["pause_step"] -= 1
-            #         action = AntAction.NO_ACTION
-            #     else:
-            #         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-            #         self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["colony_position"]
-            #         action = self.goto(perception)
-            #         self.memory["ant_memory"][perception.ant_id]["pause_step"] = 20
-            #         # simplify structure
-            # -> not really effective. We need to find the right distance and wait time. That needs testing
 
             else:
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
@@ -172,10 +153,6 @@ class NonCooperativeStrategy(AntStrategy):
     def goto(self, perception):
         """Move toward the absolute destination stored in memory."""
 
-        # Random chance we do a scan : -> not great, or at least not visible, even bad !
-        # if not perception.has_food and random.random() < 0.05: # 5% chance to do a scan instead of going to the destination
-        #     print("scan")
-        #     return self.scan_here(perception)
 
         ax, ay = self.memory["ant_memory"][perception.ant_id]["ant_position"]
 
@@ -243,16 +220,6 @@ class NonCooperativeStrategy(AntStrategy):
             action = actions[self.memory["ant_memory"][perception.ant_id]["scan_step"]]
             self.memory["ant_memory"][perception.ant_id]["scan_step"] += 1
 
-        # if detects ant with food during scan, spies -> not effective
-        # if any(has_food for _, has_food in perception.nearby_ants) and self.memory["ant_memory"][perception.ant_id][
-        #     "spy_pause"] == 0:
-        #     spy_dest = self.spy(perception)
-        #     if spy_dest is not None:
-        #         self.memory["ant_memory"][perception.ant_id]["goto_destination"] = spy_dest
-        #         self.memory["ant_memory"][perception.ant_id]["spy_pause"] = 100
-        #         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-        #         self.memory["ant_memory"][perception.ant_id][
-        #             "scan_step"] = 0  # stop scanning to go to the spied destination
 
         if self.memory["ant_memory"][perception.ant_id]["scan_step"] >= len(actions):
             self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0
@@ -261,47 +228,6 @@ class NonCooperativeStrategy(AntStrategy):
             self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = None # to be sure
 
         return action
-
-
-    def scan_here(self, perception):
-        """Scan the surrounding area for food"""
-        print("ant", perception.ant_id, "is scanning around last known food position") # very rarely does a scan
-
-        # take into account the cells the ant already saw to avoid scanning the same area again
-        # many ways to improve that scan by storing different values ?
-
-        actions = [AntAction.TURN_RIGHT for i in range(8)] # for the moment only turn right 8 times to do a full 360° scan
-
-        self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = self.memory["ant_memory"][perception.ant_id]["current_action"]
-
-        # # first version : simple 360° scan around the ant
-        # if self.memory["ant_memory"][perception.ant_id]["ant_position"] != self.memory["ant_memory"][perception.ant_id]["goto_destination"]:
-        #     self.memory["ant_memory"][perception.ant_id]["current_action"] = "Scan"
-        #     self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["ant_memory"][perception.ant_id]["last_food_position"] # problem : scan always goes to last position
-        #     action = self.goto(perception)
-
-        #else:
-        action = actions[self.memory["ant_memory"][perception.ant_id]["scan_step"]]
-        self.memory["ant_memory"][perception.ant_id]["scan_step"] += 1
-
-        # if detects ant with food during scan, spies -> not effective
-        # if any(has_food for _, has_food in perception.nearby_ants) and self.memory["ant_memory"][perception.ant_id]["spy_pause"] == 0:
-        #     spy_dest = self.spy(perception)
-        #     if spy_dest is not None:
-        #         self.memory["ant_memory"][perception.ant_id]["goto_destination"] = spy_dest
-        #         self.memory["ant_memory"][perception.ant_id]["spy_pause"] = 100
-        #         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-        #         self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0 # stop scanning to go to the spied destination
-
-        if self.memory["ant_memory"][perception.ant_id]["scan_step"] >= len(actions):
-            self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0
-            #self.memory["ant_memory"][perception.ant_id]["current_action"] = self.memory["ant_memory"][perception.ant_id]["scan_previous_action"]
-            self.memory["ant_memory"][perception.ant_id]["current_action"] = None
-            self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = None # to be sure
-
-        return action
-
-
 
 
 
@@ -390,19 +316,3 @@ class NonCooperativeStrategy(AntStrategy):
             self.memory["ant_memory"][perception.ant_id]["food_positions"],
             key=lambda food: (food[0] - ax) ** 2 + (food[1] - ay) ** 2
         )
-
-    # Étapes :
-    # implémenter l'enregistrement des positions de nourriture + déplacement vers la nourriture la plus proche
-    # implémenter implémenter un scatter plus intelligent : lorsqu'il y a un obstacle, refaire un scatter vers un autre endroit
-    # implémenter un scan + quand l'utiliser ?
-
-
-    # ATTENTION :
-    # Une fourmi peut porter maximum une nourriture à la fois
-    # radius de vision : 3, pas 4 !
-
-    # Il n'est pas possible qu'un nouriture soit mis à un autre endroit que la colonie. Il n'y aura donc jamais de nouriture
-    # à un ednroit où il n'y en avait pas jusque là.
-
-    # A-t-on une info du nombre de nouriture totale sur le terrain ? Quand est-ce que le jeu s'arete-t-il ?
-    # temps et nombre de pas limités. Si 90% de la nouriture a été trouvée dans ce temps là on considére que la stratégie réussis.

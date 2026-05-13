@@ -26,6 +26,7 @@ class NonCooperativeStrategy(AntStrategy):
         self.memory["ant_memory"][ant_id] = {
             "ant_position": (0, 0),  # is at the colony in the beginning
             "food_positions": [], # list of absolute positions of food the ant has seen,
+            "last_food_position": None, # absolute position of the last food the ant has seen, to use for scanning around it when we don't see any food but we know there is some nearby
             "current_action": "Scatter",
             # Can be "Goto", "Scan", "Scatter", "Spy" (going to the colony -> goto with the position of the colony)
             "goto_destination": None, # absolute position of the destination when the current action is "Goto"
@@ -71,7 +72,7 @@ class NonCooperativeStrategy(AntStrategy):
         elif self.memory["ant_memory"][perception.ant_id]["current_action"] == "Goto":
             # Try to spy if a single food-carrying ant is nearby and the cooldown has expired
             if (any(has_food for _, has_food in perception.nearby_ants)
-                    and len(perception.nearby_ants) == 1 # can remove ?
+                    #and len(perception.nearby_ants) == 1 # can remove ?
                     and self.memory["ant_memory"][perception.ant_id]["spy_pause"] == 0):
                 spy_dest = self.spy(perception)
                 if spy_dest is not None:
@@ -90,6 +91,10 @@ class NonCooperativeStrategy(AntStrategy):
             self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
             self.memory["ant_memory"][perception.ant_id]["goto_destination"] = closest_food
             action = self.goto(perception)
+
+        # go to last know food position to scan
+        elif self.memory["ant_memory"][perception.ant_id]["last_food_position"] or self.memory["ant_memory"][perception.ant_id]["current_action"] == "Scan":
+            action = self.scan(perception)
 
         else:
             action = self.scatter(perception)
@@ -184,15 +189,22 @@ class NonCooperativeStrategy(AntStrategy):
                 return AntAction.TURN_LEFT
 
 
-    def scan(self):
+    def scan(self, perception):
         """Scan the surrounding area for food"""
 
         # take into account the cells the ant already saw to avoid scanning the same area again
         # many ways to improve that scan by storing different values ?
 
         # first version : simple 360° scan around the ant
+        if self.memory["ant_memory"][perception.ant_id]["ant_position"] == self.memory["ant_memory"][perception.ant_id]["goto_destination"]:
+            # do a 360°
+            action = AntAction.TURN_RIGHT # frist try simple turn right
 
-        pass
+        self.memory["ant_memory"][perception.ant_id]["current_action"] = "Scan"
+        self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["ant_memory"][perception.ant_id]["last_food_position"]
+        action = self.goto(perception)
+
+        return action
 
 
     def scatter(self, perception):

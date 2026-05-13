@@ -75,7 +75,7 @@ class NonCooperativeStrategy(AntStrategy):
                 #print("ant", perception.ant_id, "is scanning around food position instead of picking up the food")
                 action = self.scan_here(perception)
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = "Scan"
-                self.memory["ant_memory"][perception.ant_id]["last_food_position"] = self.memory
+                self.memory["ant_memory"][perception.ant_id]["last_food_position"] = self.memory["ant_memory"][perception.ant_id]["ant_position"]
             else:
                 # Found food and not carrying any — pick it up and head home
                 action = AntAction.PICK_UP_FOOD

@@ -72,7 +72,7 @@ class NonCooperativeStrategy(AntStrategy):
         elif self.ant_is_on_food(perception) and not perception.has_food: # can remove has_food due to previous condition, but clearer to keep it ?
             # 50% chance to do a scan instead of picking up the food, to try to find more food around and not just one by one
             if random.random() < 0.5:
-                print("ant", perception.ant_id, "is scanning around food position instead of picking up the food")
+                #print("ant", perception.ant_id, "is scanning around food position instead of picking up the food")
                 action = self.scan_here(perception)
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = "Scan"
                 self.memory["ant_memory"][perception.ant_id]["last_food_position"] = self.memory

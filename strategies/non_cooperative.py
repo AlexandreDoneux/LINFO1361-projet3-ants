@@ -70,10 +70,17 @@ class NonCooperativeStrategy(AntStrategy):
                 action = self.goto(perception)
 
         elif self.ant_is_on_food(perception) and not perception.has_food: # can remove has_food due to previous condition, but clearer to keep it ?
-            # Found food and not carrying any — pick it up and head home
-            action = AntAction.PICK_UP_FOOD
-            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
-            self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["colony_position"]
+            # 50% chance to do a scan instead of picking up the food, to try to find more food around and not just one by one
+            if random.random() < 0.5:
+                print("ant", perception.ant_id, "is scanning around food position instead of picking up the food")
+                action = self.scan_here(perception)
+                self.memory["ant_memory"][perception.ant_id]["current_action"] = "Scan"
+                self.memory["ant_memory"][perception.ant_id]["last_food_position"] = self.memory
+            else:
+                # Found food and not carrying any — pick it up and head home
+                action = AntAction.PICK_UP_FOOD
+                self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+                self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["colony_position"]
 
         elif self.memory["ant_memory"][perception.ant_id]["current_action"] == "Goto":
             # Try to spy if a single food-carrying ant is nearby and the cooldown has expired
@@ -201,7 +208,7 @@ class NonCooperativeStrategy(AntStrategy):
 
     def scan_last_position(self, perception):
         """Scan the surrounding area for food"""
-        print("ant", perception.ant_id, "is scanning around last known food position") # very rarely does a scan
+        #print("ant", perception.ant_id, "is scanning around last known food position") # very rarely does a scan
 
         # take into account the cells the ant already saw to avoid scanning the same area again
         # many ways to improve that scan by storing different values ?
@@ -220,6 +227,28 @@ class NonCooperativeStrategy(AntStrategy):
             action = actions[self.memory["ant_memory"][perception.ant_id]["scan_step"]]
             self.memory["ant_memory"][perception.ant_id]["scan_step"] += 1
 
+
+        if self.memory["ant_memory"][perception.ant_id]["scan_step"] >= len(actions):
+            self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0
+            #self.memory["ant_memory"][perception.ant_id]["current_action"] = self.memory["ant_memory"][perception.ant_id]["scan_previous_action"]
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = None
+            self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = None # to be sure
+
+        return action
+
+
+    def scan_here(self, perception):
+        """Scan the surrounding area for food"""
+        #print("ant", perception.ant_id, "is scanning around last known food position") # very rarely does a scan
+
+        # take into account the cells the ant already saw to avoid scanning the same area again
+        # many ways to improve that scan by storing different values ?
+
+        actions = [AntAction.TURN_RIGHT for i in range(8)] # for the moment only turn right 8 times to do a full 360° scan
+
+        self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = self.memory["ant_memory"][perception.ant_id]["current_action"]
+        action = actions[self.memory["ant_memory"][perception.ant_id]["scan_step"]]
+        self.memory["ant_memory"][perception.ant_id]["scan_step"] += 1
 
         if self.memory["ant_memory"][perception.ant_id]["scan_step"] >= len(actions):
             self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0

@@ -98,7 +98,7 @@ class NonCooperativeStrategy(AntStrategy):
 
         # go to last know food position to scan
         elif self.memory["ant_memory"][perception.ant_id]["last_food_position"] or self.memory["ant_memory"][perception.ant_id]["current_action"] == "Scan":
-            action = self.scan(perception)
+            action = self.scan_last_position(perception)
 
         else:
             action = self.scatter(perception)
@@ -150,6 +150,12 @@ class NonCooperativeStrategy(AntStrategy):
 
     def goto(self, perception):
         """Move toward the absolute destination stored in memory."""
+
+        # Random chance we do a scan : -> not great, or at least not visible
+        if not perception.has_food and random.random() < 0.05: # 5% chance to do a scan instead of going to the destination
+            print("scan")
+            return self.scan_here(perception)
+
         ax, ay = self.memory["ant_memory"][perception.ant_id]["ant_position"]
 
         dest_x, dest_y = self.memory["ant_memory"][perception.ant_id]["goto_destination"]
@@ -195,7 +201,7 @@ class NonCooperativeStrategy(AntStrategy):
                 return AntAction.TURN_LEFT
 
 
-    def scan(self, perception):
+    def scan_last_position(self, perception):
         """Scan the surrounding area for food"""
         print("ant", perception.ant_id, "is scanning around last known food position") # very rarely does a scan
 
@@ -209,8 +215,7 @@ class NonCooperativeStrategy(AntStrategy):
         # first version : simple 360° scan around the ant
         if self.memory["ant_memory"][perception.ant_id]["ant_position"] != self.memory["ant_memory"][perception.ant_id]["goto_destination"]:
             self.memory["ant_memory"][perception.ant_id]["current_action"] = "Scan"
-            self.memory["ant_memory"][perception.ant_id]["goto_destination"] = \
-            self.memory["ant_memory"][perception.ant_id]["last_food_position"]
+            self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["ant_memory"][perception.ant_id]["last_food_position"] # problem : scan always goes to last position
             action = self.goto(perception)
 
         else:
@@ -224,6 +229,39 @@ class NonCooperativeStrategy(AntStrategy):
             self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = None # to be sure
 
         return action
+
+
+    def scan_here(self, perception):
+        """Scan the surrounding area for food"""
+        print("ant", perception.ant_id, "is scanning around last known food position") # very rarely does a scan
+
+        # take into account the cells the ant already saw to avoid scanning the same area again
+        # many ways to improve that scan by storing different values ?
+
+        actions = [AntAction.TURN_RIGHT for i in range(8)] # for the moment only turn right 8 times to do a full 360° scan
+
+        self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = self.memory["ant_memory"][perception.ant_id]["current_action"]
+
+        # # first version : simple 360° scan around the ant
+        # if self.memory["ant_memory"][perception.ant_id]["ant_position"] != self.memory["ant_memory"][perception.ant_id]["goto_destination"]:
+        #     self.memory["ant_memory"][perception.ant_id]["current_action"] = "Scan"
+        #     self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["ant_memory"][perception.ant_id]["last_food_position"] # problem : scan always goes to last position
+        #     action = self.goto(perception)
+
+        #else:
+        action = actions[self.memory["ant_memory"][perception.ant_id]["scan_step"]]
+        self.memory["ant_memory"][perception.ant_id]["scan_step"] += 1
+
+        if self.memory["ant_memory"][perception.ant_id]["scan_step"] >= len(actions):
+            self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0
+            #self.memory["ant_memory"][perception.ant_id]["current_action"] = self.memory["ant_memory"][perception.ant_id]["scan_previous_action"]
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = None
+            self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = None # to be sure
+
+        return action
+
+
+
 
 
     def scatter(self, perception):

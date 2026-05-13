@@ -222,6 +222,17 @@ class NonCooperativeStrategy(AntStrategy):
             action = actions[self.memory["ant_memory"][perception.ant_id]["scan_step"]]
             self.memory["ant_memory"][perception.ant_id]["scan_step"] += 1
 
+        # if detects ant with food during scan, spies -> not effective
+        # if any(has_food for _, has_food in perception.nearby_ants) and self.memory["ant_memory"][perception.ant_id][
+        #     "spy_pause"] == 0:
+        #     spy_dest = self.spy(perception)
+        #     if spy_dest is not None:
+        #         self.memory["ant_memory"][perception.ant_id]["goto_destination"] = spy_dest
+        #         self.memory["ant_memory"][perception.ant_id]["spy_pause"] = 100
+        #         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+        #         self.memory["ant_memory"][perception.ant_id][
+        #             "scan_step"] = 0  # stop scanning to go to the spied destination
+
         if self.memory["ant_memory"][perception.ant_id]["scan_step"] >= len(actions):
             self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0
             #self.memory["ant_memory"][perception.ant_id]["current_action"] = self.memory["ant_memory"][perception.ant_id]["scan_previous_action"]
@@ -251,6 +262,15 @@ class NonCooperativeStrategy(AntStrategy):
         #else:
         action = actions[self.memory["ant_memory"][perception.ant_id]["scan_step"]]
         self.memory["ant_memory"][perception.ant_id]["scan_step"] += 1
+
+        # if detects ant with food during scan, spies -> not effective
+        # if any(has_food for _, has_food in perception.nearby_ants) and self.memory["ant_memory"][perception.ant_id]["spy_pause"] == 0:
+        #     spy_dest = self.spy(perception)
+        #     if spy_dest is not None:
+        #         self.memory["ant_memory"][perception.ant_id]["goto_destination"] = spy_dest
+        #         self.memory["ant_memory"][perception.ant_id]["spy_pause"] = 100
+        #         self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto"
+        #         self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0 # stop scanning to go to the spied destination
 
         if self.memory["ant_memory"][perception.ant_id]["scan_step"] >= len(actions):
             self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0

@@ -152,9 +152,9 @@ class NonCooperativeStrategy(AntStrategy):
         """Move toward the absolute destination stored in memory."""
 
         # Random chance we do a scan : -> not great, or at least not visible
-        if not perception.has_food and random.random() < 0.05: # 5% chance to do a scan instead of going to the destination
-            print("scan")
-            return self.scan_here(perception)
+        # if not perception.has_food and random.random() < 0.05: # 5% chance to do a scan instead of going to the destination
+        #     print("scan")
+        #     return self.scan_here(perception)
 
         ax, ay = self.memory["ant_memory"][perception.ant_id]["ant_position"]
 

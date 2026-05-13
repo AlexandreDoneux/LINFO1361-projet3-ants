@@ -28,9 +28,10 @@ class NonCooperativeStrategy(AntStrategy):
             "food_positions": [], # list of absolute positions of food the ant has seen,
             "last_food_position": None, # absolute position of the last food the ant has seen, to use for scanning around it when we don't see any food but we know there is some nearby
             "current_action": "Scatter",
-            # Can be "Goto", "Scan", "Scatter", "Spy" (going to the colony -> goto with the position of the colony)
+            # Can be "Goto", "Scan", "Scatter", "Spy", AvoidAnt (going to the colony -> goto with the position of the colony)
             "goto_destination": None, # absolute position of the destination when the current action is "Goto"
             "spy_pause": 0, # number of steps during which the ant cannot reinitiate a spy action, to avoid too much spying and allow time to find food after spying
+            "avoid_ant_step": 0, # step (action number) of the "step aside" action
         }
 
         # add obstacles later when implementing a more complex strategy
@@ -109,8 +110,9 @@ class NonCooperativeStrategy(AntStrategy):
             elif any([other_ant[0] == (dir_x, dir_y) for other_ant in perception.nearby_ants]):
                 if not perception.has_food:
                     self.scatter(perception)
-                action = AntAction.NO_ACTION
                 # add step-aside for ants not holding food
+                self.memory["ant_memory"][perception.ant_id]["current_action"] = "AvoidAnt"
+                self.avoid_ant(perception)
 
             else:
                 # update position in memory
@@ -218,7 +220,16 @@ class NonCooperativeStrategy(AntStrategy):
 
     def avoid_ant(self, perception):
         """Avoid collision with nearby ants by changing direction momentarilly."""
-        pass
+
+        actions = [ AntAction.TURN_RIGHT, AntAction.TURN_LEFT] # for the moment only turn slightly to the right and go forward
+        action = actions[self.memory["ant_memory"][perception.ant_id]["avoid_ant_step"]]
+        self.memory["ant_memory"][perception.ant_id]["avoid_ant_step"] += 1
+
+        if self.memory["ant_memory"][perception.ant_id]["avoid_ant_step"] >= len(actions):
+            self.memory["ant_memory"][perception.ant_id]["avoid_ant_step"] = 0
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto" # check this, or use another memory variable to store the previous action
+
+        return action
 
 
     def bounce_back(self, perception):

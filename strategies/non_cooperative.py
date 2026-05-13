@@ -169,7 +169,7 @@ class NonCooperativeStrategy(AntStrategy):
         rel_y = dest_y - ay
 
         if (rel_x, rel_y) == (0, 0):
-            return AntAction.NO_ACTION # do something else ? It should not happen
+            return random.choice([AntAction.TURN_LEFT, AntAction.TURN_RIGHT, AntAction.MOVE_FORWARD]) # to avoid getting stuck when at the limit of the colony
 
         all_directions = [ # use .get_delta instead of hardcoding the deltas ?
             (Direction.NORTH, (0, -1)),

@@ -33,6 +33,8 @@ class NonCooperativeStrategy(AntStrategy):
             "spy_pause": 0, # number of steps during which the ant cannot reinitiate a spy action, to avoid too much spying and allow time to find food after spying
             "avoid_ant_step": 0, # step (action number) of the "step aside" action
             "avoid_ant_previous_action": None, # to store the previous action before avoiding an ant, to be able to go back to it after avoiding the ant
+            "scan_step": 0, # step (action number) of the scan action, to be able to do a full 360° scan with multiple steps if needed
+            "scan_previous_action": None, # to store the previous action before scanning, to be able to go back to it after scanning
         }
 
         # add obstacles later when implementing a more complex strategy
@@ -195,18 +197,31 @@ class NonCooperativeStrategy(AntStrategy):
 
     def scan(self, perception):
         """Scan the surrounding area for food"""
+        print("ant", perception.ant_id, "is scanning around last known food position") # very rarely does a scan
 
         # take into account the cells the ant already saw to avoid scanning the same area again
         # many ways to improve that scan by storing different values ?
 
-        # first version : simple 360° scan around the ant
-        if self.memory["ant_memory"][perception.ant_id]["ant_position"] == self.memory["ant_memory"][perception.ant_id]["goto_destination"]:
-            # do a 360°
-            action = AntAction.TURN_RIGHT # frist try simple turn right
+        actions = [AntAction.TURN_RIGHT for i in range(8)] # for the moment only turn right 8 times to do a full 360° scan
 
-        self.memory["ant_memory"][perception.ant_id]["current_action"] = "Scan"
-        self.memory["ant_memory"][perception.ant_id]["goto_destination"] = self.memory["ant_memory"][perception.ant_id]["last_food_position"]
-        action = self.goto(perception)
+        self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = self.memory["ant_memory"][perception.ant_id]["current_action"]
+
+        # first version : simple 360° scan around the ant
+        if self.memory["ant_memory"][perception.ant_id]["ant_position"] != self.memory["ant_memory"][perception.ant_id]["goto_destination"]:
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Scan"
+            self.memory["ant_memory"][perception.ant_id]["goto_destination"] = \
+            self.memory["ant_memory"][perception.ant_id]["last_food_position"]
+            action = self.goto(perception)
+
+        else:
+            action = actions[self.memory["ant_memory"][perception.ant_id]["scan_step"]]
+            self.memory["ant_memory"][perception.ant_id]["scan_step"] += 1
+
+        if self.memory["ant_memory"][perception.ant_id]["scan_step"] >= len(actions):
+            self.memory["ant_memory"][perception.ant_id]["scan_step"] = 0
+            #self.memory["ant_memory"][perception.ant_id]["current_action"] = self.memory["ant_memory"][perception.ant_id]["scan_previous_action"]
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = None
+            self.memory["ant_memory"][perception.ant_id]["scan_previous_action"] = None # to be sure
 
         return action
 

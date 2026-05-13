@@ -32,6 +32,7 @@ class NonCooperativeStrategy(AntStrategy):
             "goto_destination": None, # absolute position of the destination when the current action is "Goto"
             "spy_pause": 0, # number of steps during which the ant cannot reinitiate a spy action, to avoid too much spying and allow time to find food after spying
             "avoid_ant_step": 0, # step (action number) of the "step aside" action
+            "avoid_ant_previous_action": None, # to store the previous action before avoiding an ant, to be able to go back to it after avoiding the ant
         }
 
         # add obstacles later when implementing a more complex strategy
@@ -111,6 +112,7 @@ class NonCooperativeStrategy(AntStrategy):
                 if not perception.has_food:
                     self.scatter(perception)
                 # add step-aside for ants not holding food
+                self.memory["ant_memory"][perception.ant_id]["avoid_ant_previous_action"] = self.memory["ant_memory"][perception.ant_id]["current_action"]
                 self.memory["ant_memory"][perception.ant_id]["current_action"] = "AvoidAnt"
                 self.avoid_ant(perception)
 
@@ -227,7 +229,8 @@ class NonCooperativeStrategy(AntStrategy):
 
         if self.memory["ant_memory"][perception.ant_id]["avoid_ant_step"] >= len(actions):
             self.memory["ant_memory"][perception.ant_id]["avoid_ant_step"] = 0
-            self.memory["ant_memory"][perception.ant_id]["current_action"] = "Goto" # check this, or use another memory variable to store the previous action
+            self.memory["ant_memory"][perception.ant_id]["current_action"] = self.memory["ant_memory"][perception.ant_id]["avoid_ant_previous_action"]
+            self.memory["ant_memory"][perception.ant_id]["avoid_ant_previous_action"] = None # to be sure
 
         return action
 
